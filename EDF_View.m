@@ -203,6 +203,24 @@ guidata(hObject, handles);
 
 % UIWAIT makes EDF_View wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
+global EdfFilePath;
+global EdfFileName;
+global XmlFilePath;
+global XmlFileName;
+
+global needOpenDialog;
+if (~needOpenDialog)
+    % Step#1: Visualize Edf
+    if (~(strcmp(EdfFilePath,'') || strcmp(EdfFileName, '')))
+        MenuOpenEDF_Callback(hObject, eventdata, handles);
+        % Step#2: Visualize Xml
+        if (~(strcmp(XmlFilePath,'') || strcmp(XmlFileName, '')))
+            MenuOpenXML_Callback(hObject, eventdata, handles);
+        end
+    end
+end
+needOpenDialog = logical(1);
+
  
 %------------------------------------------------------- EDF_View_OutputFcn
 % --- Outputs from this function are returned to the command line.
@@ -220,15 +238,21 @@ function MenuOpenEDF_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Openfile start path
-openStartFolder = handles.openStartFolder;
-fileSpec = strcat(openStartFolder,'*.edf');
-[FileName FilePath]=uigetfile(fileSpec,'Open EDF File');
+handles = guidata(hObject);
 
-if ~(length(FilePath)==1)
+global needOpenDialog;
+global EdfFilePath;
+global EdfFileName;
+
+% Openfile start path
+if (needOpenDialog)
+    [EdfFileName EdfFilePath] = uigetfile(strcat(handles.openStartFolder, '*.edf'), 'Open EDF File');
+end
+
+if ~(length(EdfFilePath)==1)
     % Store file name
-    handles.FileName=[FilePath FileName];
-    handles.openStartFolder = FilePath;
+    handles.FileName = [EdfFilePath EdfFileName];
+    handles.openStartFolder = EdfFilePath;
     
     % Set menu flags on (dad, 2012/07/27)
     set(handles.MenuOpenXML,'enable','on');
@@ -341,7 +365,7 @@ if ~(length(FilePath)==1)
     handles.XML_LOADED = 0;
     
     % Update figure title
-    figureTitle = sprintf('%s: %s',handles.figureDefaultTitle, FileName);
+    figureTitle = sprintf('%s: %s',handles.figureDefaultTitle, EdfFileName);
     set(handles.figure1, 'Name', figureTitle);
     
     % Clear Hynogram and Annotations
@@ -357,6 +381,7 @@ if ~(length(FilePath)==1)
     
     % Let user know load has been completed
     set(handles.figure1,'pointer', 'arrow');
+    guidata(hObject, handles);
 end
 
 
@@ -508,7 +533,7 @@ guidata(hObject, handles);
 
 
 %----------------------------------------------------------------- DataLoad
-function handles=DataLoad(handles)
+function handles = DataLoad(handles)
 % DataLoad rewritten to access data loaded with block load.
 
 % Access epoch
@@ -1223,16 +1248,24 @@ function MenuOpenXML_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-Temp = handles.FileName;
-Temp([-3:0]+end)=[];
-[FileNameAnn FilePath]=uigetfile([Temp '*.xml'],'Open XML File');
+handles = guidata(hObject);
 
+global needOpenDialog;
+global XmlFilePath;
+global XmlFileName;
+    
+Temp = handles.FileName;
+Temp([-3:0]+end) = [];
+
+if (needOpenDialog)
+    [XmlFileName XmlFilePath] = uigetfile([Temp '*.xml'], 'Open XML File');
+end
 
 handles.FlagAnn=1;
 % if there is ann file
-if ~(sum(FileNameAnn==0))
+if ~(sum(XmlFileName==0))
     % check for the version of xml
-    Fid = fopen([FilePath FileNameAnn],'r');
+    Fid = fopen([XmlFilePath XmlFileName],'r');
     Temp = fread(Fid,[1 inf],'uint8');
     fclose(Fid);
     Temp = strfind(Temp,'Compumedics');
@@ -1242,7 +1275,7 @@ if ~(sum(FileNameAnn==0))
         % it is compumedics ann file
         handles.FlagAnnType = 1;
         [handles.ScoredEvent, handles.SleepStages, handles.EpochLength]=...
-            readXML_Com([FilePath FileNameAnn]);
+            readXML_Com([XmlFilePath XmlFileName]);
         handles.PlotType = 1;
         Temp = [];
         
@@ -1255,7 +1288,7 @@ if ~(sum(FileNameAnn==0))
         % it is PhysiMIMI file
         handles.FlagAnnType = 0;
         [handles.ScoredEvent, handles.SleepStages, handles.EpochLength,...
-            annotation] = readXML([FilePath FileNameAnn]);
+            annotation] = readXML([XmlFilePath XmlFileName]);
         handles.PlotType = 0;
     end
     
@@ -1306,7 +1339,7 @@ else
 %         handles.FlagAnn=0;
     end
 end
-
+guidata(hObject, handles);
 
 
 
